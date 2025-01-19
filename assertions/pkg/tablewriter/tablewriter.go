@@ -18,6 +18,7 @@ func AssertStringGotWant(t testing.TB, got, want string) {
 
 	if got != want {
 		table.Render()
+		t.Errorf("TEST FAILED")
 	} else {
 		table.Render()
 	}
@@ -32,6 +33,7 @@ func AssertFloatGotWant(t testing.TB, got, want float64) {
 
 	if got != want {
 		table.Render()
+		t.Errorf("TEST FAILED")
 	} else {
 		table.Render()
 	}
@@ -46,6 +48,7 @@ func AssertStructGotWant(t testing.TB, got, want interface{}) {
 
 	if got != want {
 		table.Render()
+		t.Errorf("TEST FAILED")
 	} else {
 		table.Render()
 	}
@@ -59,6 +62,7 @@ func AssertError(t testing.TB, got error, want string) {
 
 	if got == nil {
 		table.Append([]string{fmt.Sprintf("%v", "ERROR IS NIL"), fmt.Sprintf("%v", want)})
+		t.Errorf("Expected not nil but found nil")
 	} else {
 		if strings.Contains(got.Error(), want) {
 			table.Append([]string{fmt.Sprintf("%v", got.Error()), fmt.Sprintf("%v", want)})
@@ -68,5 +72,16 @@ func AssertError(t testing.TB, got error, want string) {
 			table.Render()
 			t.Errorf("TEST FAILED")
 		}
+	}
+}
+
+func AssertErrorNil(t testing.TB, got error) {
+	t.Helper()
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Error Message"})
+
+	if got == nil {
+		table.Append([]string{fmt.Sprintf("%v", "ERROR IS NIL")})
 	}
 }
