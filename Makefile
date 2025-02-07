@@ -53,26 +53,23 @@ run-docker: ## run dicedb in a Docker container
 	docker run -p 7379:7379 dicedb/dicedb:latest
 
 format: ## format the code using go fmt
-	go fmt ./...
+	golangci-lint run --no-config --disable-all --enable wsl --fix ./l/...
+	golangci-lint run --no-config --disable-all --enable wsl --fix ./assertions/...
 
-GOLANGCI_LINT_VERSION := 1.62.2
+GOLANGCI_LINT_VERSION := 1.63.4
 
 lint: check-golangci-lint ## run golangci-lint
 	golangci-lint run ./l/...
-
-wsl: check-golangci-lint ## run Whitespace Linter to improve code readability 
-	golangci-lint run --no-config --disable-all --enable wsl ./assertions/...
-	golangci-lint run --no-config --disable-all --enable wsl ./l/...
 
 check-golangci-lint:
 	@if ! command -v golangci-lint > /dev/null || ! golangci-lint version | grep -q "$(GOLANGCI_LINT_VERSION)"; then \
 		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION) not found."; \
 		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
-		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.62.2"; \
+		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.63.4"; \
 		exit 1; \
 	fi
 
-dev: format wsl lint test ## Task we need to run during development
+dev: format lint test ## Task we need to run during development
 
 clean: ## clean the dicedb binary
 	@echo "Cleaning build artifacts..."

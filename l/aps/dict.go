@@ -1,14 +1,14 @@
 package aps
 
-var (
-	ErrNotFound          = DictionaryErr("could not find the word you were looking for")
-	ErrWordExists        = DictionaryErr("could not add the word becasuse it already exist")
-	ErrWordDoesNotExists = DictionaryErr("could not find the word when updating")
-)
-
 type (
 	Dictionary    map[string]string
 	DictionaryErr string
+)
+
+var (
+	ErrNotFound      = DictionaryErr("could not find the word you are looking for")
+	ErrWordExists    = DictionaryErr("word already exists")
+	ErrWordNotExists = DictionaryErr("the word you are looking for does not exijts")
 )
 
 func (e DictionaryErr) Error() string {
@@ -43,7 +43,7 @@ func (d Dictionary) Update(word, definition string) error {
 	_, err := d.Search(word)
 	switch err {
 	case ErrNotFound:
-		return ErrWordDoesNotExists
+		return ErrWordNotExists
 	case nil:
 		d[word] = definition
 	default:
@@ -54,5 +54,15 @@ func (d Dictionary) Update(word, definition string) error {
 }
 
 func (d Dictionary) Delete(word string) error {
+	_, err := d.Search(word)
+	switch err {
+	case ErrNotFound:
+		return ErrWordNotExists
+	case nil:
+		delete(d, word)
+	default:
+		return err
+	}
+
 	return nil
 }

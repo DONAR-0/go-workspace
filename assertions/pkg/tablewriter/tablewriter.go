@@ -85,3 +85,15 @@ func AssertErrorNil(t testing.TB, got error) {
 		table.Append([]string{fmt.Sprintf("%v", "ERROR IS NIL")})
 	}
 }
+
+func AssertErrorType(t testing.TB, got, want error) {
+	t.Helper()
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Got", "Want"})
+
+	if got != want {
+		table.Append([]string{fmt.Sprintf("%v", got), fmt.Sprintf("%v", want)})
+		t.Errorf("TEST FAILED")
+	}
+}
