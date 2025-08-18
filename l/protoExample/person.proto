@@ -1,0 +1,30 @@
+// person.proto
+syntax = "proto3"; // Specifies the Protocol Buffers language version
+
+// This is the fix for the previous error.
+// It tells the compiler to generate code for the "main" package
+// and place it in the current directory ('.').
+option go_package = "./;main";
+
+// The Person message describes a person with a name, ID, and email.
+message Person {
+  string name = 1; // Unique identifier (tag) 1
+  int32 id = 2;    // Tag 2
+  string email = 3; // Tag 3
+
+  // Nested message for phone numbers
+  message PhoneNumber {
+    string number = 1;
+    PhoneType type = 2; // Using an enum
+  }
+
+  // Enum for phone types
+  enum PhoneType {
+    MOBILE = 0; // Enum values must start from 0
+    HOME = 1;
+    WORK = 2;
+  }
+
+  // repeated means it's a list/array of PhoneNumbers
+  repeated PhoneNumber phones = 4;
+}

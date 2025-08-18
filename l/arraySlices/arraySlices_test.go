@@ -50,19 +50,19 @@ func TestSumTails(t *testing.T) {
 }
 
 func BenchmarkSum(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		Sum([]int{b.N, b.N + 1, b.N - 2})
 	}
 }
 
 func BenchmarkSumAll(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		SumAll([]int{b.N, b.N + 1, b.N - 2}, []int{b.N, b.N - 1, b.N + 2})
 	}
 }
 
 func BenchmarkSumAllTails(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		SumAllTails([]int{b.N, b.N + 1, b.N - 2}, []int{b.N, b.N - 1, b.N + 2})
 	}
 }

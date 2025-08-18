@@ -39,7 +39,7 @@ func AssertFloatGotWant(t testing.TB, got, want float64) {
 	}
 }
 
-func AssertStructGotWant(t testing.TB, got, want interface{}) {
+func AssertStructGotWant(t testing.TB, got, want any) {
 	t.Helper()
 
 	table := tablewriter.NewWriter(os.Stdout)

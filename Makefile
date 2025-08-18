@@ -29,12 +29,14 @@ test: ## run the integration tests
 	go test -race -count=1 -p=1 github.com/donar-0/go-workspace/... 
 	cd l/iteration/ && go test -bench=. 
 	cd l/arraySlices/ && go test -bench=.
+	cd l/konkruncy && go test -v -bench=.
 
 
 testv: ## run the integration tests
 	go test -race -count=1 -p=1 -v github.com/donar-0/go-workspace/... 
-	cd l/iteration && go test -v -bench=.
-	cd l/arraySlices/ && go test -v -bench=.
+	(cd l/iteration && go test -v -bench=.)
+	(cd l/arraySlices && go test -v -bench=.)
+	(cd l/konkruncy && go test -v -bench=.)
 
 test-one: ## run a single integration test function by name (e.g. make test-one TEST_FUNC=TestSetGet)
 	go test -v -race -count=1 --run $(TEST_FUNC) ./l/...
@@ -53,10 +55,10 @@ run-docker: ## run dicedb in a Docker container
 	docker run -p 7379:7379 dicedb/dicedb:latest
 
 format: ## format the code using go fmt
-	golangci-lint run --no-config --disable-all --enable wsl --fix ./l/...
-	golangci-lint run --no-config --disable-all --enable wsl --fix ./assertions/...
+	golangci-lint run --no-config  --enable wsl_v5 --fix ./l/...
+	golangci-lint run --no-config  --enable wsl_v5 --fix ./assertions/...
 
-GOLANGCI_LINT_VERSION := 1.63.4
+GOLANGCI_LINT_VERSION := 2.3.0
 
 lint: check-golangci-lint ## run golangci-lint
 	golangci-lint run ./l/...
