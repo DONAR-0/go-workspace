@@ -37,6 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("marshaling error: %v", err)
 	}
+
 	fmt.Printf("\nMarshaled data (bytes): %x\n", data)
 	fmt.Printf("Marshaled data size: %d bytes\n", len(data))
 

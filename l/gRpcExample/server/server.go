@@ -7,7 +7,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/donar-0/go-workspace/l/greeterExample/helloworld"
+	"github.com/donar-0/go-workspace/l/gRpcExample/helloworld"
 	"google.golang.org/grpc"
 )
 
@@ -21,6 +21,7 @@ func (s *server) SayHello(_ context.Context,
 	in *helloworld.HelloRequest) (*helloworld.HelloReply,
 	error) {
 	log.Printf("Received: %v", in.GetName())
+
 	return &helloworld.HelloReply{
 		Message: "Hello" + in.GetName(),
 	}, nil
@@ -34,13 +35,16 @@ func (s *server) SayHelloAgain(ctx context.Context, in *helloworld.HelloRequest)
 
 func main() {
 	flag.Parse()
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		log.Fatalf("failed to listen %v", err)
 	}
+
 	s := grpc.NewServer()
 	helloworld.RegisterGreeterServer(s, &server{})
 	log.Printf("server listening at %v", lis.Addr())
+
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

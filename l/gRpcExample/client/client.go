@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/donar-0/go-workspace/l/greeterExample/helloworld"
+	"github.com/donar-0/go-workspace/l/gRpcExample/helloworld"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -25,19 +25,34 @@ func main() {
 	if err != nil {
 		log.Fatalf("did not connect %v", err)
 	}
-	defer conn.Close()
+	defer deferCheck(conn.Close)
+
 	c := helloworld.NewGreeterClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
 	r, err := c.SayHello(ctx, &helloworld.HelloRequest{
-		Name: *name,
-	})
-	r, err = c.SayHelloAgain(ctx, &helloworld.HelloRequest{
 		Name: *name,
 	})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
+
 	log.Printf("Greeting: %s", r.GetMessage())
+
+	r_again, err := c.SayHelloAgain(ctx, &helloworld.HelloRequest{
+		Name: *name,
+	})
+	if err != nil {
+		log.Fatalf("could not greet: %v", err)
+	}
+
+	log.Printf("Greeting: %s", r_again.GetMessage())
+}
+
+func deferCheck(closeFunc func() error) {
+	if err := closeFunc(); err != nil {
+		log.Printf("Got Error when closing, %v", err)
+	}
 }
