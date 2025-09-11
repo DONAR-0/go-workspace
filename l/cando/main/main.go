@@ -19,6 +19,7 @@ func main() {
 		Model: "Mustang",
 		Year:  2021,
 	}
+
 	fmt.Printf("\n-------------Car 1 --------------------\n")
 
 	car1.DisplayInfo()
