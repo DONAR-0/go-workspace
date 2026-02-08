@@ -59,7 +59,7 @@ format: ## format the code using go fmt
 	golangci-lint run --no-config  --enable wsl_v5 --fix ./assertions/...
 	golangci-lint run --no-config  --enable wsl_v5 --fix ./debugFormat/...
 
-GOLANGCI_LINT_VERSION := 2.3.0
+GOLANGCI_LINT_VERSION := 2.5.0
 
 lint: check-golangci-lint ## run golangci-lint
 	golangci-lint run ./debugFormat/...
@@ -70,7 +70,7 @@ check-golangci-lint:
 	@if ! command -v golangci-lint > /dev/null || ! golangci-lint version | grep -q "$(GOLANGCI_LINT_VERSION)"; then \
 		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION) not found."; \
 		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
-		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.63.4"; \
+		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0"; \
 		exit 1; \
 	fi
 
@@ -78,5 +78,9 @@ dev: format lint test ## Task we need to run during development
 
 clean: ## clean the dicedb binary
 	@echo "Cleaning build artifacts..."
-	rm -f dicedb
+	rm -rf ma
 	@echo "Clean complete."
+build: ## Build Cli for multiapp
+	@echo "Multiple application cli"
+	go build -o ma ./cli/main.go
+	@echo "Build Complete"

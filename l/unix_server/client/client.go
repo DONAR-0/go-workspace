@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+
+	"github.com/DONAR-0/go-workspace/assertions/pkg/utils"
 )
 
 const sockPath = "/tmp/echo.sock"
@@ -13,11 +15,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
 
-	fmt.Fprintln(conn, "ping")
-	fmt.Fprintln(conn, "hanuman ji ki jai")
-	fmt.Fprintln(conn, "quit")
+	utils.DeferCheck(conn.Close)
+
+	_, _ = fmt.Fprintln(conn, "ping")
+	_, _ = fmt.Fprintln(conn, "hanuman ji ki jai")
+	_, _ = fmt.Fprintln(conn, "quit")
 
 	sc := bufio.NewScanner(conn)
 	for sc.Scan() {

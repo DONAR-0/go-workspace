@@ -10,6 +10,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	"github.com/DONAR-0/go-workspace/assertions/pkg/utils"
 )
 
 var sockPath = "/tmp/echo.sock"
@@ -21,7 +23,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer ln.Close()
+
+	utils.DeferCheck(ln.Close)
 
 	_ = os.Chmod(sockPath, 0660)
 	log.Println("UDS echo server listening on", sockPath)
@@ -65,16 +68,16 @@ func main() {
 }
 
 func handleConn(c net.Conn) {
-	defer c.Close()
+	utils.DeferCheck(c.Close)
 
 	addr := c.RemoteAddr()
-	fmt.Fprintf(c, "Hello from %s\n", filepath.Base(sockPath))
+	_, _ = fmt.Fprintf(c, "Hello from %s\n", filepath.Base(sockPath))
 
 	sc := bufio.NewScanner(c)
 	for sc.Scan() {
 		line := sc.Text()
 		// Echo the line back
-		fmt.Fprintf(c, "echo: %s\n", line)
+		_, _ = fmt.Fprintf(c, "echo: %s\n", line)
 	}
 	// If needed, check sc.Err() for read errors
 	fmt.Println("client disconnected:", addr)
