@@ -48,6 +48,7 @@ deps:
 	go mod download
 	go mod tidy
 	@echo "✅ Dependencies installed"
+
 .PHONY: test
 test:
 	@echo "Running tests"
