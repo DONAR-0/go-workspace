@@ -142,10 +142,14 @@ func (c *ChromaClient) CreateCollection(name string) (string, error) {
 	return result.ID, nil
 }
 
+// ListDocuments - List Documents in collection
 func (c *ChromaClient) ListDocuments(collectionID string) (*GetRecordsResponse, error) {
-	endpoint := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections/%s/get", c.URL, c.Tenant, c.Database, collectionID)
+	// FIX: Add Tenant and Database as Query Parameters
+	endpoint := fmt.Sprintf("%s/api/v2/collections/%s/get?tenant=%s&database=%s",
+		c.URL, collectionID, c.Tenant, c.Database)
 
-	// "include" defines what data to return. By default, it might only return IDs.
+	slog.Info("Listing Document from endPoint", "endPoint", endpoint)
+
 	payload := GetRecordsRequest{
 		Include: []string{"documents", "metadatas"},
 	}
@@ -211,6 +215,41 @@ func (c *ChromaClient) GetIDByName(name string) (string, error) {
 	return "", fmt.Errorf("collection '%s' not found", name)
 }
 
+// AddDocument - Corrected Metadata tag handling
+func (c *ChromaClient) AddDocument(collectionID, id, text string, vector []float32) error {
+	endpoint := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections/%s/add",
+		c.URL, c.Tenant, c.Database, collectionID)
+
+	payload := AddRecordsRequest{
+		IDs:        []string{id},
+		Documents:  []string{text},
+		Embeddings: [][]float32{vector}, // Pass the vector here
+	}
+
+	jsonData, _ := json.Marshal(payload)
+	resp, err := c.client.Post(endpoint, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("chroma error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// Simplified logic for what your Go function will do:
+func (c *ChromaClient) GenerateLocalEmbedding(text string) ([]float32, error) {
+	// 1. Load tokenizer.json -> Convert text to IDs [1, 442, 12...]
+	// 2. Feed IDs to model.onnx
+	// 3. Get output tensor (Shape: [1, Tokens, 384])
+	// 4. Calculate Mean: sum all vectors / number of tokens
+	// 5. Return []float32{...}
+}
+
 // Json Parser struct
 type (
 	CreateCollectionRequest struct {
@@ -245,5 +284,12 @@ type (
 		IDs       []string         `json:"ids"`
 		Documents []string         `json:"documents"`
 		Metadatas []map[string]any `json:"metadatas"`
+	}
+
+	AddRecordsRequest struct {
+		IDs        []string         `json:"ids"`
+		Documents  []string         `json:"documents"`
+		Embeddings [][]float32      `json:"embeddings"` // Change: No longer omitempty
+		Metadatas  []map[string]any `json:"metadatas,omitempty"`
 	}
 )

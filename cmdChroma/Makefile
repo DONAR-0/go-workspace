@@ -1,9 +1,24 @@
 # Variables 
 BINARY_NAME=chroma
-MAIN_PATH=./cli
+MAIN_PATH=./client/main/main.go
 BUILD_DIR=./dist
 GOARCH=amd64
 GOOS=linux
+
+# Paths - Using absolute paths for reliability
+PROJECT_DIR := $(CURDIR)
+MAIN_PATH := ./client/main/main.go
+BINARY_NAME := chroma
+BUILD_DIR := ./dist
+
+# Library Directories
+TOKENIZER_LIB_DIR := $(PROJECT_DIR)/models/tokenizerLib
+ONNX_LIB_DIR := $(PROJECT_DIR)/models/onnx_runtime/onnxruntime-linux-x64-1.24.2/lib
+
+# CGO Settings
+export CGO_ENABLED=1
+# -L tells the compiler where to find libtokenizers.a
+export CGO_LDFLAGS=-L$(TOKENIZER_LIB_DIR) -ltokenizers -lstdc++
 
 #Default target
 .PHONY: all
@@ -95,12 +110,12 @@ uninstall:
 	sudo rm -f /usr/local/bin/$(BINARY_NAME)
 	@echo "✅ $(BINARY_NAME) uninstalled"
 
-# Run the cli.
-.PHONY: Run
-run: build
-	@echo "Running in developement mode..."
-	go run $(MAIN_PATH)
-
+.PHONY: run
+run:
+	@echo "Running in development mode..."
+	@# LD_LIBRARY_PATH is required so the OS can find the .so.1 files at runtime
+	LD_LIBRARY_PATH="$(ONNX_LIB_DIR):$(LD_LIBRARY_PATH)" \
+	go run $(MAIN_PATH)	
 # Show Help
 .PHONY: help
 help:

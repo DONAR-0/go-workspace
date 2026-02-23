@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/urfave/cli/v3"
 )
@@ -102,7 +103,7 @@ func handleListCollection(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-// handleCreateCollection
+// handleCreateCollection Create Collection
 func handleCreateCollection(_ context.Context, cmd *cli.Command) error {
 	// Get Positional Argument
 	collectionName := cmd.Args().Get(0)
@@ -130,15 +131,21 @@ func handleCreateCollection(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func handleListDocuments(_ context.Context, cmd *cli.Command) error {
-	input := cmd.Args().Get(0)
-	client, _ := createChromaClient(cmd)
+// List Documents in collection
+func handleListDocuments(_ context.Context, c *cli.Command) error {
+	slog.Info("Inside handleListDocuments", "Tenant", c.String("tenant"), "Database", c.String("database"))
+	input := c.Args().Get(0)
+	if input == "" {
+		return fmt.Errorf("Argument empty Collection name not found, Please provide collection name")
+	}
+	client, _ := createChromaClient(c)
 
 	// Step 1: Always try to resolve the name to an ID first
 	targetID, err := client.GetIDByName(input)
 	if err != nil {
 		targetID = input
 	}
+	slog.Info("Resolved Collection Name to ID:", "Name", input, "ID", targetID)
 
 	// Step 2: Now call the endpoint with a guaranteed UUID (hopefully)
 	docs, err := client.ListDocuments(targetID)
@@ -147,5 +154,31 @@ func handleListDocuments(_ context.Context, cmd *cli.Command) error {
 	}
 
 	slog.Info(fmt.Sprintf("✅ Retrieved %d documents from %s\n", len(docs.IDs), input))
+	return nil
+}
+
+func handleAddRecordDocumentInCollection(_ context.Context, c *cli.Command) error {
+	collectionName := c.Args().Get(0)
+	if collectionName == "" {
+		return fmt.Errorf("Argument empty collection name not found, Please propvide collection name")
+	}
+	client, err := createChromaClient(c)
+	if err != nil {
+		return err
+	}
+	content := c.String("doc")
+	docId := c.String("id")
+	if docId == "" {
+		// Fallback  to simple timestamp ID if none existed
+		docId = fmt.Sprintf("doc-%d", time.Now().UnixNano())
+	}
+
+	//1. Resolve Name -> UUID
+	targetID, err := client.GetIDByName(collectionName)
+	if err != nil {
+		return err
+	}
+	//2. Add the document
+	err = client.AddDocument(targetID, []string{docId}, []string{content}, nil)
 	return nil
 }

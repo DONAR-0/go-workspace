@@ -23,12 +23,13 @@ func createApp() *cli.Command {
 			return ctx, nil
 		},
 		Commands: []*cli.Command{
-			testCommandDefinition(),
+			TestCommandDefinition(),
 			GetTenantDefinition(),
 			ListDatabaseDefinition(),
 			ListCollectionsInDatabaseDefinition(),
 			GetOrCreateCollectionInDatabaseDefinition(),
 			ListRecordsInCollection(),
+			AddDocumentCommandDefinition(),
 		},
 
 		//Default action when no command is provided
@@ -80,15 +81,16 @@ func GetOrCreateCollectionInDatabaseDefinition() *cli.Command {
 
 func ListRecordsInCollection() *cli.Command {
 	return &cli.Command{
-		Name:    "records",
-		Aliases: []string{"ls-rs", "rs"},
-		Usage:   "List All the records in database",
-		Action:  handleListDocuments,
-		Flags:   []cli.Flag{tenantFlag, databaseFlag, collectionFlag},
+		Name:      "records",
+		Aliases:   []string{"ls-rs", "rs"},
+		Usage:     "List All the records in database",
+		ArgsUsage: collection_args_usage,
+		Action:    handleListDocuments,
+		Flags:     []cli.Flag{tenantFlag, databaseFlag, collectionFlag},
 	}
 }
 
-func testCommandDefinition() *cli.Command {
+func TestCommandDefinition() *cli.Command {
 	return &cli.Command{
 		Name:    "testConnection",
 		Aliases: []string{"test", "t"},
@@ -97,6 +99,26 @@ func testCommandDefinition() *cli.Command {
 			"ensures the service is responding correctly",
 		Action: handleTestConnection,
 		Flags:  []cli.Flag{timeoutFlag, tenantFlag, databaseFlag},
+	}
+}
+
+func AddDocumentCommandDefinition() *cli.Command {
+	return &cli.Command{
+		Name:      "add",
+		Aliases:   []string{"a", "insert"},
+		Usage:     "Add a single document to collection",
+		ArgsUsage: "<collection_name>",
+		// Use Description to provide detailed usage examples
+		Description: `Add a single document and its metadata to a collection.
+		
+EXAMPLES:
+   # Add a document with an auto-generated ID
+   chroma add my_collection --doc "this is my text"
+
+   # Add a document with a specific ID
+   chroma add my_collection --doc "another text" --id "user-001"`,
+		Action: handleAddRecordDocumentInCollection,
+		Flags:  []cli.Flag{docFlag, idFlag},
 	}
 }
 
@@ -148,4 +170,21 @@ var (
 		Value: 30,
 		Usage: "Connection timeout in seconds",
 	}
+
+	docFlag = &cli.StringFlag{
+		Name:     "doc",
+		Aliases:  []string{"d"},
+		Usage:    "The Text Content of the document",
+		Required: true,
+	}
+
+	idFlag = &cli.StringFlag{
+		Name:  "id",
+		Usage: "Unique Id for the docuement (auto-generated if empty)",
+		Value: "",
+	}
+)
+
+const (
+	collection_args_usage = "<collection_name>"
 )
