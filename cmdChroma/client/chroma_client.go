@@ -8,12 +8,14 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/donar0/favecli/onnx"
 	"github.com/google/uuid"
 )
 
 type ChromaClient struct {
 	URL, Tenant, Database string
 	client                *http.Client
+	Embedder              *onnx.Embedder
 }
 
 func NewChromaDBClient(url, tenant, database string) *ChromaClient {
@@ -144,31 +146,37 @@ func (c *ChromaClient) CreateCollection(name string) (string, error) {
 
 // ListDocuments - List Documents in collection
 func (c *ChromaClient) ListDocuments(collectionID string) (*GetRecordsResponse, error) {
-	// FIX: Add Tenant and Database as Query Parameters
-	endpoint := fmt.Sprintf("%s/api/v2/collections/%s/get?tenant=%s&database=%s",
-		c.URL, collectionID, c.Tenant, c.Database)
+	// CHANGE: Use the fully scoped path, just like your AddDocument function
+	endpoint := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections/%s/get",
+		c.URL, c.Tenant, c.Database, collectionID)
 
-	slog.Info("Listing Document from endPoint", "endPoint", endpoint)
+	slog.Info("Listing Documents", "endpoint", endpoint)
 
-	payload := GetRecordsRequest{
-		Include: []string{"documents", "metadatas"},
+	// When using the scoped URL above, some Chroma versions expect a simpler body
+	payload := map[string]interface{}{
+		"include": []string{"documents", "metadatas"},
+		// "ids": nil, // Try omitting this first to get all
 	}
 
-	jsonData, _ := json.Marshal(payload)
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
 	resp, err := c.client.Post(endpoint, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to get documents: %d, %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("failed to get documents: status %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	var result GetRecordsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	return &result, nil
@@ -243,11 +251,15 @@ func (c *ChromaClient) AddDocument(collectionID, id, text string, vector []float
 
 // Simplified logic for what your Go function will do:
 func (c *ChromaClient) GenerateLocalEmbedding(text string) ([]float32, error) {
-	// 1. Load tokenizer.json -> Convert text to IDs [1, 442, 12...]
-	// 2. Feed IDs to model.onnx
-	// 3. Get output tensor (Shape: [1, Tokens, 384])
-	// 4. Calculate Mean: sum all vectors / number of tokens
-	// 5. Return []float32{...}
+	if c.Embedder == nil {
+		return nil, fmt.Errorf("error recieved: embedder is not initialized")
+	}
+
+	vector, err := c.Embedder.Embed(text)
+	if err != nil {
+		return nil, fmt.Errorf("error received failed to generate embeddings: %w", err)
+	}
+	return vector, nil
 }
 
 // Json Parser struct
@@ -276,8 +288,12 @@ type (
 	}
 
 	GetRecordsRequest struct {
-		IDs     []string `json:"ids,omitempty"`
-		Include []string `json:"include"`
+		Tenant   string   `json:"tenant"`
+		Database string   `json:"database"`
+		IDs      []string `json:"ids,omitempty"`
+		Include  []string `json:"include"`
+		Limit    *int     `json:"limit"`
+		Offset   *int     `json:"offset"`
 	}
 
 	GetRecordsResponse struct {

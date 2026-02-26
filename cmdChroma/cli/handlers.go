@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/donar0/favecli/onnx"
 	"github.com/urfave/cli/v3"
 )
 
@@ -153,6 +154,22 @@ func handleListDocuments(_ context.Context, c *cli.Command) error {
 		return fmt.Errorf("failed to list documents: %w", err)
 	}
 
+	fmt.Printf("\n--- Documents in %s ---\n", targetID)
+	for i := 0; i < len(docs.IDs); i++ {
+		fmt.Printf("ID:       %s\n", docs.IDs[i])
+
+		// Check if Documents slice isn't empty
+		if len(docs.Documents) > i {
+			fmt.Printf("Content:  %s\n", docs.Documents[i])
+		}
+
+		// Check if Metadata exists for this record
+		if len(docs.Metadatas) > i && docs.Metadatas[i] != nil {
+			fmt.Printf("Metadata: %v\n", docs.Metadatas[i])
+		}
+		fmt.Println("-----------------------")
+	}
+
 	slog.Info(fmt.Sprintf("✅ Retrieved %d documents from %s\n", len(docs.IDs), input))
 	return nil
 }
@@ -162,23 +179,52 @@ func handleAddRecordDocumentInCollection(_ context.Context, c *cli.Command) erro
 	if collectionName == "" {
 		return fmt.Errorf("Argument empty collection name not found, Please propvide collection name")
 	}
+	// 1. Create the standard HTTP Client
 	client, err := createChromaClient(c)
 	if err != nil {
 		return err
 	}
+
+	// 2. Load the AI embedding engine (only for this command)
+	slog.Info("Loading AI Embedding Engine...")
+	embedder, err := onnx.NewEmbedder(
+		"./models/minilm/model.onnx",
+		"./models/minilm/tokenizer.json",
+		"./models/onnx_runtime/onnxruntime-linux-x64-1.24.2/lib/libonnxruntime.so",
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize AI engine: %w", err)
+	}
+	defer embedder.Close() // Crucial: Frees RAM/C++ memory when done
+	client.Embedder = embedder
+
+	// 3. Prepare data
 	content := c.String("doc")
 	docId := c.String("id")
 	if docId == "" {
-		// Fallback  to simple timestamp ID if none existed
 		docId = fmt.Sprintf("doc-%d", time.Now().UnixNano())
 	}
 
-	//1. Resolve Name -> UUID
+	// 4. Generate the Embedding Vector
+	slog.Info("Generating local embedding...", "text_length", len(content))
+	vector, err := client.GenerateLocalEmbedding(content)
+	if err != nil {
+		return fmt.Errorf("embedding failed: %w", err)
+	}
+
+	// 5. Resolve Collection Name to UUID
 	targetID, err := client.GetIDByName(collectionName)
+	if err != nil {
+		return fmt.Errorf("could not find collection '%s': %w", collectionName, err)
+	}
+
+	// 6. Upload to ChromaDB
+	slog.Info("Uploading to ChromaDB", "collection", collectionName, "id", docId)
+	err = client.AddDocument(targetID, docId, content, vector)
 	if err != nil {
 		return err
 	}
-	//2. Add the document
-	err = client.AddDocument(targetID, []string{docId}, []string{content}, nil)
+
+	fmt.Printf("✅ Successfully added document '%s' to collection '%s'\n", docId, collectionName)
 	return nil
 }

@@ -1,125 +1,113 @@
-# Variables 
+# ==============================================================================
+# Variables & Paths
+# ==============================================================================
 BINARY_NAME=chroma
-MAIN_PATH=./client/main/main.go
+MAIN_PATH=./cli
 BUILD_DIR=./dist
 GOARCH=amd64
 GOOS=linux
 
-# Paths - Using absolute paths for reliability
-PROJECT_DIR := $(CURDIR)
-MAIN_PATH := ./client/main/main.go
-BINARY_NAME := chroma
-BUILD_DIR := ./dist
-
-# Library Directories
+# Absolute paths for reliability with CGO and Shared Libraries
+PROJECT_DIR      := $(CURDIR)
 TOKENIZER_LIB_DIR := $(PROJECT_DIR)/models/tokenizerLib
-ONNX_LIB_DIR := $(PROJECT_DIR)/models/onnx_runtime/onnxruntime-linux-x64-1.24.2/lib
+ONNX_LIB_DIR      := $(PROJECT_DIR)/models/onnx_runtime/onnxruntime-linux-x64-1.24.2/lib
 
-# CGO Settings
+# ==============================================================================
+# CGO Settings (Required for Tokenizers & ONNX)
+# ==============================================================================
 export CGO_ENABLED=1
-# -L tells the compiler where to find libtokenizers.a
+# -L tells the linker where to find libtokenizers.a
 export CGO_LDFLAGS=-L$(TOKENIZER_LIB_DIR) -ltokenizers -lstdc++
 
-#Default target
-.PHONY: all
-all: clean build
+# ==============================================================================
+# Development Targets
+# ==============================================================================
 
-#Build the CLI binary
+.PHONY: all
+all: clean build ## Clean and build the CLI binary
+
+.PHONY: help
+help: ## Show this help message
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Available Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: run
+run: ## Run in dev mode (Handles LD_LIBRARY_PATH for ONNX)
+	@echo "Running in development mode..."
+	LD_LIBRARY_PATH="$(ONNX_LIB_DIR):$(LD_LIBRARY_PATH)" go run $(MAIN_PATH)
+
 .PHONY: build
-build:
-	@echo "Building $(BINARY_NAME)"
+build: ## Build the binary for current OS
+	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
 	@echo "✅ Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
-# Build for specific OS/Architecture
+.PHONY: clean
+clean: ## Remove build artifacts and coverage files
+	@echo "Cleaning up..."
+	rm -rf $(BUILD_DIR) coverage.out coverage.html
+	@echo "✅ Clean complete"
+
+# ==============================================================================
+# Cross-Compilation Targets
+# ==============================================================================
+
 .PHONY: build-linux
-build-linux:
-	@echo "Building $(BINARY_NAME) for Linux"
+build-linux: ## Build for Linux (amd64)
+	@echo "Building for Linux..."
 	@mkdir -p $(BUILD_DIR)
 	GOOS=linux GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH)
-	@echo "✅ Linux build complete: $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64"
-	
+
 .PHONY: build-darwin
-build-darwin:
-	@echo "Building $(BINARY_NAME) for macOS"
+build-darwin: ## Build for macOS (amd64)
+	@echo "Building for macOS..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=darwin GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH)
-	@echo "✅ macOS build complete: $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64"
+	GOOS=darwin GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME-darwin-amd64) $(MAIN_PATH)
 
 .PHONY: build-windows
-build-windows:
-	@echo "Building $(BINARY_NAME) for Windows"
+build-windows: ## Build for Windows (amd64)
+	@echo "Building for Windows..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=windows GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)
-	@echo "✅ Windows build complete: $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe"
+	GOOS=windows GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME).exe $(MAIN_PATH)
 
 .PHONY: build-all
-build-all: build-darwin build-windows build-linux
+build-all: build-linux build-darwin build-windows ## Build for all platforms
+
+# ==============================================================================
+# Maintenance & Tooling
+# ==============================================================================
 
 .PHONY: deps
-deps:
-	@echo "Installing dependencies"
+deps: ## Download and tidy go modules
+	@echo "Installing dependencies..."
 	go mod download
 	go mod tidy
-	@echo "✅ Dependencies installed"
 
 .PHONY: test
-test:
-	@echo "Running tests"
+test: ## Run unit tests
+	@echo "Running tests..."
 	go test -v ./...
-	@echo "✅ Tests complete"
- 
-# Run tests with coverage 
-test-coverage:
-	@echo "Running tests"
-	go test -v  -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
-	@echo "✅ Tests complete"
 
-# Format Code
 .PHONY: fmt
-fmt:
-	@echo "Formatting code..."
+fmt: ## Format source code
 	go fmt ./...
-	@echo "✅ Code formatted"
 
-# Lint Code
 .PHONY: lint
-lint:
-	@echo "Linting code...."
+lint: ## Run linter (golangci-lint)
 	@if command -v golangci-lint > /dev/null; then \
 		golangci-lint run; \
 	else \
-		echo "golangci-lint not found. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
 		go vet ./...; \
-	fi 
-	@echo "✅ Linting complete"
- 
-# Install binary to system
+	fi
+
 .PHONY: install
-install: build
-	@echo "Installing $(BINARY_NAME) to system"
-	sudo cp $(BUILD_DIR)/$(BINARY_NAME) /usr/local/bin
-	@echo "✅ $(BINARY_NAME) installed to /usr/local/bin"
+install: build ## Install binary to /usr/local/bin
+	sudo cp $(BUILD_DIR)/$(BINARY_NAME) /usr/local/bin/
 
-#Uninstall binary from system
 .PHONY: uninstall
-uninstall:
-	@echo "Uninstalling $(BINARY_NAME) from system..."
+uninstall: ## Remove binary from /usr/local/bin
 	sudo rm -f /usr/local/bin/$(BINARY_NAME)
-	@echo "✅ $(BINARY_NAME) uninstalled"
 
-.PHONY: run
-run:
-	@echo "Running in development mode..."
-	@# LD_LIBRARY_PATH is required so the OS can find the .so.1 files at runtime
-	LD_LIBRARY_PATH="$(ONNX_LIB_DIR):$(LD_LIBRARY_PATH)" \
-	go run $(MAIN_PATH)	
-# Show Help
-.PHONY: help
-help:
-	@echo "Available Targets"
-	@echo "	all 		- Clean and build the CLI"
-	@echo "	build 		- Build the CLI binary"
-	@echo "	build-linux	- Build the CLI Linux binary"
