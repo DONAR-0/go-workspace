@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/donar0/favecli/internal"
 	"github.com/donar0/favecli/onnx"
 	"github.com/google/uuid"
 )
@@ -34,11 +35,13 @@ func (c *ChromaClient) TestConnection() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to ChromaDB at %s: %w", c.URL, err)
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
+
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("heartbeat failed with status: %d, response: %s", resp.StatusCode, string(body))
 	}
+
 	slog.Info(fmt.Sprintf("ChromaDB connection successful: %s\n", string(body)))
 	return nil
 }
@@ -51,7 +54,7 @@ func (c *ChromaClient) GetTenant(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
 
 	// 200 means exists, 404 means it doesn't
 	if resp.StatusCode == http.StatusOK {
@@ -72,7 +75,7 @@ func (c *ChromaClient) ListDatabases() ([]Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -96,7 +99,7 @@ func (c *ChromaClient) ListCollections() ([]Collection, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to request collections: %w", err)
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("failed to list collections: status %d,body%s", resp.StatusCode, string(body))
@@ -120,13 +123,13 @@ func (c *ChromaClient) CreateCollection(name string) (string, error) {
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("Unable to Marshal json data for payload")
+		return "", fmt.Errorf("error received: unable to marshal json data for payload")
 	}
 	resp, err := c.client.Post(endpoint, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
@@ -139,7 +142,7 @@ func (c *ChromaClient) CreateCollection(name string) (string, error) {
 	}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		return "", fmt.Errorf("Unable to decode information")
+		return "", fmt.Errorf("error received: unable to decode information")
 	}
 	return result.ID, nil
 }
@@ -153,7 +156,7 @@ func (c *ChromaClient) ListDocuments(collectionID string) (*GetRecordsResponse, 
 	slog.Info("Listing Documents", "endpoint", endpoint)
 
 	// When using the scoped URL above, some Chroma versions expect a simpler body
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"include": []string{"documents", "metadatas"},
 		// "ids": nil, // Try omitting this first to get all
 	}
@@ -167,7 +170,7 @@ func (c *ChromaClient) ListDocuments(collectionID string) (*GetRecordsResponse, 
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -208,7 +211,7 @@ func (c *ChromaClient) GetIDByName(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
 
 	var collections []Collection // Use the struct with ID and Name tags
 	if err := json.NewDecoder(resp.Body).Decode(&collections); err != nil {
@@ -239,7 +242,7 @@ func (c *ChromaClient) AddDocument(collectionID, id, text string, vector []float
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer cd(resp.Body.Close)
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -308,4 +311,8 @@ type (
 		Embeddings [][]float32      `json:"embeddings"` // Change: No longer omitempty
 		Metadatas  []map[string]any `json:"metadatas,omitempty"`
 	}
+)
+
+var (
+	cd = internal.CheckDefer
 )

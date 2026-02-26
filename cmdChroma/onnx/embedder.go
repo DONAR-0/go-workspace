@@ -4,8 +4,11 @@ import (
 	"fmt"
 
 	"github.com/daulet/tokenizers"
+	"github.com/donar0/favecli/internal"
 	ort "github.com/yalue/onnxruntime_go"
 )
+
+var cd = internal.CheckDefer
 
 type Embedder struct {
 	session   *ort.DynamicAdvancedSession
@@ -63,13 +66,13 @@ func (e *Embedder) Embed(text string) ([]float32, error) {
 	maT, _ := ort.NewTensor(shape, mask)
 	tyT, _ := ort.NewTensor(shape, types)
 
-	defer inT.Destroy()
-	defer maT.Destroy()
-	defer tyT.Destroy()
+	defer cd(inT.Destroy)
+	defer cd(maT.Destroy)
+	defer cd(tyT.Destroy)
 
 	// Step C: Run Brain (Math -> Raw Output)
 	outT, _ := ort.NewEmptyTensor[float32](ort.NewShape(1, lenght, 384))
-	defer outT.Destroy()
+	defer cd(outT.Destroy)
 
 	err := e.session.Run([]ort.ArbitraryTensor{inT, maT, tyT}, []ort.ArbitraryTensor{outT})
 	if err != nil {
@@ -81,7 +84,7 @@ func (e *Embedder) Embed(text string) ([]float32, error) {
 }
 
 func (e *Embedder) Close() {
-	e.tokenizer.Close()
-	e.session.Destroy()
-	ort.DestroyEnvironment()
+	cd(e.tokenizer.Close)
+	cd(e.session.Destroy)
+	cd(ort.DestroyEnvironment)
 }

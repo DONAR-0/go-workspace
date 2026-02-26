@@ -137,7 +137,7 @@ func handleListDocuments(_ context.Context, c *cli.Command) error {
 	slog.Info("Inside handleListDocuments", "Tenant", c.String("tenant"), "Database", c.String("database"))
 	input := c.Args().Get(0)
 	if input == "" {
-		return fmt.Errorf("Argument empty Collection name not found, Please provide collection name")
+		return fmt.Errorf("argument empty Collection name not found, Please provide collection name")
 	}
 	client, _ := createChromaClient(c)
 
@@ -177,7 +177,7 @@ func handleListDocuments(_ context.Context, c *cli.Command) error {
 func handleAddRecordDocumentInCollection(_ context.Context, c *cli.Command) error {
 	collectionName := c.Args().Get(0)
 	if collectionName == "" {
-		return fmt.Errorf("Argument empty collection name not found, Please propvide collection name")
+		return fmt.Errorf("argument empty collection name not found, Please propvide collection name")
 	}
 	// 1. Create the standard HTTP Client
 	client, err := createChromaClient(c)
