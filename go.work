@@ -3,7 +3,7 @@ go 1.25.7
 use (
 	./assertions
 	./cli
-	./cmdChroma
 	./debugFormat
 	./l
+	./mcp-server/
 )
