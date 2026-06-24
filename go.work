@@ -1,9 +1,9 @@
-go 1.25.7
+go 1.26.4
 
 use (
 	./assertions
 	./cli
+	./cmdChroma
 	./debugFormat
 	./l
-	./mcp-server/
 )
