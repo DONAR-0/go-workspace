@@ -58,8 +58,10 @@ format: ## format the code using go fmt
 	golangci-lint run --no-config  --enable wsl_v5 --fix ./l/...
 	golangci-lint run --no-config  --enable wsl_v5 --fix ./assertions/...
 	golangci-lint run --no-config  --enable wsl_v5 --fix ./debugFormat/...
+	golangci-lint run --no-config  --enable wsl_v5 --fix ./cmdChroma/...
+	golangci-lint run --no-config  --enable wsl_v5 --fix ./timesfm-testing/...
 
-GOLANGCI_LINT_VERSION := 2.5.0
+GOLANGCI_LINT_VERSION := 2.12.2
 
 lint: check-golangci-lint ## run golangci-lint
 	golangci-lint run ./debugFormat/...
@@ -70,7 +72,7 @@ check-golangci-lint:
 	@if ! command -v golangci-lint > /dev/null || ! golangci-lint version | grep -q "$(GOLANGCI_LINT_VERSION)"; then \
 		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION) not found."; \
 		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
-		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0"; \
+		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.12.2"; \
 		exit 1; \
 	fi
 

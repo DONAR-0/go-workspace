@@ -136,6 +136,7 @@ func TestWalkFn(t *testing.T) {
 	for _, test := range cases {
 		t.Run(test.Name, func(t *testing.T) {
 			var got []string
+
 			walk(test.Input, func(input string) {
 				got = append(got, input)
 			})
@@ -150,6 +151,7 @@ func TestWalkFn(t *testing.T) {
 		}
 
 		var got []string
+
 		walk(aMap, func(input string) {
 			got = append(got, input)
 		})
